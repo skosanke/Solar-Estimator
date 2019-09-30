@@ -1,23 +1,69 @@
-import matplotlib.pyplot as plt                                                 
+import matplotlib.pyplot as plt
 import numpy as np
 
 ## Create functions and set domain length
-x = np.arange(0.0, 2.0, 0.01)
-y = x**2
-dy = 2*x - 1
+info = [400, 17, 320]       ##info gives information averages [cost per panel, area, watts]
 
-## Plot functions and a point where they intersect
-plt.plot(x, y)
-plt.plot(x, dy)
-plt.plot(1, 1, 'or')
+##Get inputs from user
+bill = float(input("Enter your monthly average electric bill ($): ") )     ##Average home uses 1170 kWhr / month = $128.00
+#area = input("What is your estimated roof area (ft^2): ")      #Ill use this later to assure that panels have room
+#hours = input("How much usable daylight fall on your roof (hours/year): ")      ##Texas is 1678 hr/yr
+
+##The first thing I will cacculate will be the annual electricity costs for the next 20 years
+##This calculation is going to assume a 3% increase in energy costs each year
+year = np.linspace(0,25,26)
+increase = 1.03**year
+elec = 12*bill*(increase)
+
+##The next thing to consider is buying solar up front, where cost is 11c/kW used
+##I would like to create an analysis on the optimum amount of solar to maximize overall savings
+##So far, I only have considered using ~100% of power as solar
+hour = 1678     ##Hours of usable sunlight per year
+powerreq = bill / .11
+panelno = powerreq* 1000 / info[2] / (hour / 12)
+panelscost = 4 * panelno * info[0]      ##Roughly 25% of overall cost is due to panels themselves
+newpanelscost = (panelscost - 2500) * .7        ##including rebates from CPS and then Federal govt
+buying = np.zeros(26)
+buying[0] = newpanelscost
+
+##Second thing to consider is the solar lease, assume 20 year lease, 4% interest rate,
+##Loan equation is P = r*PV / (1-(1+r)^-n, and will be constant annual payment
+interest , yearsloan = .04 , 20
+loanpay = (newpanelscost * interest) / (1 - ((1 + interest)**-yearsloan))
+loans = np.linspace(loanpay, loanpay, 26)
+
+##Final thing to consider is a solar PPA agreement, assume 20 year agreement, price of 11c/kW, rate increase of 2%
+payment = powerreq * .11 * 12
+PPAincrease = 1.02**year
+PPA = payment*(PPAincrease)
+
+##Calculate 20 year total costs of each option:
+A, B, C, D = (np.ceil(np.sum(elec)/100))*100, (np.ceil(np.sum(buying)/100))*100, (np.ceil(np.sum(loans)/100))*100, (np.ceil(np.sum(PPA)/100))*100
+print("The total costs of")
+print("sticking with CPS: ", A)
+print("buying solar: ",B)
+print("loan: ",C)
+print("PPA: ",D)
+
+plt.plot(year, elec)
+plt.plot(year, buying)
+plt.plot(year, loans)
+plt.plot(year, PPA)
 
 ## Config the graph
-plt.title('A Cool Graph')
-plt.xlabel('X')
-plt.ylabel('Y')
-#plt.ylim([0, 4])
+plt.title('Annual Electricity Costs')
+plt.xlabel('Year')
+plt.ylabel('Annual Cost ($)')
+plt.xlim([0,25])
+#plt.ylim([0, 5000])
 plt.grid(True)
-plt.legend(['y = x^2', 'y = 2x'], loc='upper left')
+plt.legend(['Cost of Buying from CPS Energy', 'Cost of buying solar outright', 'Cost of loan', 'PPA Agreement'], loc='upper right')
+plt.text(11,buying[0]-.3*buying[0],'Overall cost of operation')
+plt.text(11,buying[0]-.35*buying[0],'CPS Energy: %s'%A)
+plt.text(11,buying[0]-.4*buying[0],'Buying Solar: %s'%B)
+plt.text(11,buying[0]-.45*buying[0],'Leasing Solar: %s'%C)
+plt.text(11,buying[0]-.5*buying[0],'PPA with Company: %s'%D)
 
-## Show the graph
 plt.show()
+
+## Now I can compare the savings of each option by subtracting annual fees from CPS fees
